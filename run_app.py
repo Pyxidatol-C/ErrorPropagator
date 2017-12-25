@@ -53,7 +53,6 @@ def get_symbols():
         success = True
         symbols = expr.atoms(sympy.Symbol)
         str_symbols = sorted([sympy.latex(symbol) for symbol in symbols])
-        print(str_symbols)
         expression = sympy.latex(expr)
     return jsonify({
         'success': success,

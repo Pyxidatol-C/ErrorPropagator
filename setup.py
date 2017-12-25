@@ -1,15 +1,22 @@
 from setuptools import setup
+import sys
+
+if sys.version_info < (3, 5):  # for f-strings
+    sys.exit("Sorry, Python >= 3.5 is required.")
 
 setup(
     name='Error Propagator',
-    version='beta 0.1',
-    description='Calculator for symbolical and numeric error propagation',
+    version='0.1',
+    description='Calculator for Symbolical and Numeric Propagation of Uncertainties',
     license='MIT',
+    author='Jingjie Yang',
+    author_email='j.yang19@ejm.org',
+    url='http://whatsdelta.herokuapp.com/',
+    python_requires='',
     packages=[
-        'app',
         'core',
-        'server',
+        'frontend',
     ],
-    install_requires=['sympy', 'flask'],
+    install_requires=['flask', 'flask-cors', 'gunicorn', 'sympy'],
     zip_safe=False
 )
