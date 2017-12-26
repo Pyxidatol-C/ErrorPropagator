@@ -38,7 +38,7 @@ def get_symbols():
 
     :return: a json object with the following keys:
              - success: true if the expression was evaluated successfully, false otherwise
-             - symbols: a list of the symbols as strings
+             - symbols: a list of the symbols as 2-element lists of plain string and latex
              - latex: the latex version of the string expression
     """
     str_expr = request.get_json().get('expr')
@@ -52,7 +52,7 @@ def get_symbols():
     else:
         success = True
         symbols = expr.atoms(sympy.Symbol)
-        str_symbols = sorted([sympy.latex(symbol) for symbol in symbols])
+        str_symbols = sorted([(str(symbol), sympy.latex(symbol)) for symbol in symbols])
         expression = sympy.latex(expr)
     return jsonify({
         'success': success,

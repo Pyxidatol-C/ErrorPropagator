@@ -15,6 +15,7 @@ class App extends Component {
             inputArgs: {
                 /* Symbols with an associated uncertainty
                 x: {
+                    latex: 'x',
                     value: 1.0,
                     absoluteUncertainty: 0.01,
                     percentageUncertainty: 1
@@ -22,6 +23,7 @@ class App extends Component {
                  */
                 /* Symbols without associated uncertainty
                y: {
+                   latex: 'y',
                    positive: false,
                    value: -3.14
                }
@@ -55,7 +57,7 @@ class App extends Component {
 
         fetch('/parse', {
             method: "POST",
-            body: JSON.stringify({expr: expression}),
+            body: JSON.stringify({"expr": expression}),
             headers: {
                 "Content-type": "application/json"
             },
@@ -67,7 +69,12 @@ class App extends Component {
                     inputArgs: {
                         $set: responseData['symbols'].reduce((o, key) => ({
                             ...o,
-                            [key]: {value: '', absoluteUncertainty: '', percentageUncertainty: ''}
+                            [key[0]]: {
+                                latex: key[1],
+                                value: '',
+                                absoluteUncertainty: '',
+                                percentageUncertainty: ''
+                            }
                         }), {})
                     },
                     outputExpression: {$set: responseData['latex']},
@@ -127,14 +134,14 @@ class App extends Component {
         fetch('/calculate', {
             method: "POST",
             body: JSON.stringify({
-                expr: this.state.inputExpression,
-                args: Object.keys(this.state.inputArgs).filter(
+                "expr": this.state.inputExpression,
+                "args": Object.keys(this.state.inputArgs).filter(
                     (x) => x !== symbol ? this.state.inputArgs[x].absoluteUncertainty : absoluteUncertainty
                 ),
-                vars: Object.keys(this.state.inputArgs).filter(
+                "vars": Object.keys(this.state.inputArgs).filter(
                     (x) => x !== symbol ? this.state.inputArgs[x].value >= 0 : value >= 0
                 ),
-                values: Object.keys(values)
+                "values": Object.keys(values)
                     .filter((x) => !isNaN(values[x]))
                     .reduce((o, x) => ({...o, [x]: values[x]}), {})
             }),
@@ -195,7 +202,7 @@ class App extends Component {
                     {Object.keys(this.state.inputArgs).map((x) => {
                         return (
                             <tr key={x}>
-                                <th><LatexDisplay contents={[x]}/></th>
+                                <th><LatexDisplay contents={[this.state.inputArgs[x].latex]}/></th>
                                 <td>
                                     <input value={this.state.inputArgs[x].value}
                                            onChange={(e) => this.handleInputArgValueChange(e, x, 'value')}/>
