@@ -40,56 +40,61 @@ class Expression:
             return f"f({self.args[0]}) = {self.expr}"
         return f"f{tuple(self.args)} = {self.expr}"
 
-    def evaluate(self, values: Dict[Union[str, sympy.Symbol], float]) -> sympy.Expr:
+    def evaluate(self, values: Dict[Union[str, sympy.Symbol], float], precision: int =3) -> sympy.Expr:
         """Evaluate the expression with the given values.
 
         :param values: a dictionary mapping all the sympy symbols in the args to numeric values
+        :param precision: the number of digits in the results
         :return: the result of the evaluation as an sympy expression
 
         >>> Expression([a, b, c], a + b + c).evaluate({a: 1, b: 2, c: 3})
-        6
+        6.00
         >>> Expression([a, b, c], a ** b + c).evaluate({'a': c, 'b': 1})
-        2*c
+        2.0*c
         """
-        return self.expr.subs(values, evaluate=True)
+        return self.expr.subs(values).evalf(precision)
 
-    def calculate_absolute_uncertainty(self, *assumptions: AppliedPredicate) -> 'Expression':
+    def calculate_absolute_uncertainty(self, *assumptions: List[AppliedPredicate],
+                                       refine: bool = False,
+                                       delta_char: str = '\\Delta ') -> 'Expression':
         """Calculate the absolute uncertainty in the expression, assuming all args given are independent.
 
         :return: the absolute uncertainty of this expression
         :rtype: Expression
 
-        >>> Expression([a], c * a).calculate_absolute_uncertainty(sympy.Q.positive(c))
-        f(\Delta a) = \Delta a*c
-        >>> Expression([a, b, c], a + b - c).calculate_absolute_uncertainty()
-        f(\Delta a, \Delta b, \Delta c) = \Delta a + \Delta b + \Delta c
+        >>> Expression([a], c * a).calculate_absolute_uncertainty(sympy.Q.positive(c), refine=True, delta_char='Δ')
+        f(Δa) = c*Δa
+        >>> Expression([a, b, c], a + b - c).calculate_absolute_uncertainty(refine=True, delta_char='Δ')
+        f(Δa, Δb, Δc) = Δa + Δb + Δc
         """
         uncertainty_expr = sympy.Integer(0)  # just in case
         uncertainty_args = []
         global_assumptions.add(*assumptions)
 
         for var in self.args:
-            d_var = sympy.Symbol('\\Delta ' + var.name)
+            d_var = sympy.Symbol(delta_char + var.name)
             uncertainty_args.append(d_var)
             uncertainty_expr += sympy.Abs(self.expr.diff(var)) * d_var
             global_assumptions.add(sympy.Q.positive(var))
-
-        uncertainty_expr = sympy.refine(uncertainty_expr)
+        if refine:
+            uncertainty_expr = sympy.refine(uncertainty_expr)
         global_assumptions.clear()
         return Expression(uncertainty_args, uncertainty_expr)
 
-    def calculate_fractional_uncertainty(self, *assumptions: AppliedPredicate) -> 'Expression':
+    def calculate_fractional_uncertainty(self, *assumptions: List[AppliedPredicate],
+                                         refine: bool = False,
+                                         delta_char: str = '\\Delta ') -> 'Expression':
         """Calculate the absolute uncertainty in the expression, assuming all args given are independent.
 
         :return: the fractional uncertainty of this expression
         :rtype: Expression
 
-        >>> Expression([a, b, c], a * b / c).calculate_fractional_uncertainty()
-        f(\Delta a, \Delta b, \Delta c) = \Delta a/a + \Delta b/b + \Delta c/c
-        >>> Expression([a], a ** b).calculate_fractional_uncertainty(sympy.Q.positive(b))
-        f(\Delta a) = \Delta a*b/a
+        >>> Expression([a, b, c], a * b / c).calculate_fractional_uncertainty(refine=True, delta_char='Δ')
+        f(Δa, Δb, Δc) = Δc/c + Δb/b + Δa/a
+        >>> Expression([a], a ** b).calculate_fractional_uncertainty(sympy.Q.positive(b), refine=True, delta_char='Δ')
+        f(Δa) = b*Δa/a
         """
-        absolute_uncertainty = self.calculate_absolute_uncertainty(*assumptions)
+        absolute_uncertainty = self.calculate_absolute_uncertainty(*assumptions, refine=refine, delta_char=delta_char)
         frac_uncertainty_expr = sympy.Integer(0)
         if type(absolute_uncertainty.expr) == sympy.Add:
             for addend in absolute_uncertainty.expr.args:

@@ -35,11 +35,15 @@ class App extends Component {
             outputAbsoluteUncertainty: '',
             outputFractionalUncertaintyExpression: '',
             outputPercentageUncertainty: '',
-            status: 0
+            status: 0,
+            timeout: 300
         }
     }
 
+    lastEdited = new Date();
+
     handleInputExpressionChange(e) {
+        const THIS_EDIT = this.lastEdited = new Date();
         let expression = e.target.value;
         this.setState(
             update(this.state, {
@@ -51,41 +55,49 @@ class App extends Component {
                 outputAbsoluteUncertainty: {$set: ''},
                 outputFractionalUncertaintyExpression: {$set: ''},
                 outputPercentageUncertainty: {$set: ''},
-                status: {$set: 1}
+                status: {$set: 2}
             })
         );
 
-        fetch('/parse', {
-            method: "POST",
-            body: JSON.stringify({"expr": expression}),
-            headers: {
-                "Content-type": "application/json"
-            },
-        })
-            .then((response) => response.json())
-            .then((responseData) => this.setState(
-                update(this.state, {
-                    status: {$set: responseData['success'] ? 0 : 1},
-                    inputArgs: {
-                        $set: responseData['symbols'].reduce((o, key) => ({
-                            ...o,
-                            [key[0]]: {
-                                latex: key[1],
-                                value: '',
-                                absoluteUncertainty: '',
-                                percentageUncertainty: ''
-                            }
-                        }), {})
-                    },
-                    outputExpression: {$set: responseData['latex']},
-                })
-            ))
+        setTimeout(() => {
+            if (this.lastEdited > THIS_EDIT) {
+                return;
+            }
+
+            fetch('/parse', {
+                method: "POST",
+                body: JSON.stringify({"expr": expression}),
+                headers: {
+                    "Content-type": "application/json"
+                },
+            })
+                .then((response) => response.json())
+                .then((responseData) => this.setState(
+                    update(this.state, {
+                        status: {$set: responseData['success'] ? 0 : 1},
+                        inputArgs: {
+                            $set: responseData['symbols'].reduce((o, key) => ({
+                                ...o,
+                                [key[0]]: {
+                                    latex: key[1],
+                                    value: '',
+                                    absoluteUncertainty: '',
+                                    percentageUncertainty: ''
+                                }
+                            }), {})
+                        },
+                        outputExpression: {$set: responseData['latex']},
+                    })
+                ))
+        }, this.state.timeout)
     }
 
     handleInputArgValueChange(e, symbol, changeType) {
         let value = this.state.inputArgs[symbol].value,
             absoluteUncertainty = this.state.inputArgs[symbol].absoluteUncertainty,
             percentageUncertainty = this.state.inputArgs[symbol].percentageUncertainty;
+
+        const THIS_EDIT = this.lastEdited = new Date();
 
         if (changeType === 'value') {
             value = e.target.value;
@@ -122,47 +134,90 @@ class App extends Component {
             })
         );
 
-        let values = Object.keys(this.state.inputArgs).reduce((o, x) => ({
-            ...o,
-            [x]: x !== symbol ? parseFloat(this.state.inputArgs[x].value) : parseFloat(value),
-            ['\\Delta ' + x]: x !== symbol ? parseFloat(this.state.inputArgs[x].absoluteUncertainty) : parseFloat(absoluteUncertainty)
-        }), {});
-        values = Object.keys(values)
-            .filter((x) => !isNaN(values[x]))
-            .reduce((o, x) => ({...o, [x]: values[x]}), {});
-
-        fetch('/calculate', {
-            method: "POST",
-            body: JSON.stringify({
-                "expr": this.state.inputExpression,
-                "args": Object.keys(this.state.inputArgs).filter(
-                    (x) => x !== symbol ? this.state.inputArgs[x].absoluteUncertainty : absoluteUncertainty
-                ),
-                "vars": Object.keys(this.state.inputArgs).filter(
-                    (x) => x !== symbol ? this.state.inputArgs[x].value >= 0 : value >= 0
-                ),
-                "values": Object.keys(values)
-                    .filter((x) => !isNaN(values[x]))
-                    .reduce((o, x) => ({...o, [x]: values[x]}), {})
-            }),
-            headers: {
-                "Content-type": "application/json"
+        setTimeout(() => {
+            if (this.lastEdited > THIS_EDIT) {
+                return;
             }
-        })
-            .then((response) => response.json())
-            .then((responseData) => this.setState(
-                update(this.state, {
-                    status: {
-                        $set: [value, absoluteUncertainty, percentageUncertainty].some(isNaN) ?
-                            1 : responseData.success ? 0 : 1
-                    },
-                    outputValue: {$set: responseData['value']},
-                    outputAbsoluteUncertainty: {$set: responseData['absoluteUncertainty']},
-                    outputAbsoluteUncertaintyExpression: {$set: responseData['absoluteUncertaintyExpr']},
-                    outputPercentageUncertainty: {$set: responseData['percentageUncertainty'] + '\\%'},
-                    outputFractionalUncertaintyExpression: {$set: responseData['fractionalUncertaintyExpr']}
-                })
-            ))
+
+            let values = Object.keys(this.state.inputArgs).reduce((o, x) => ({
+                ...o,
+                [x]: x !== symbol ? parseFloat(this.state.inputArgs[x].value) : parseFloat(value),
+                ['\\Delta ' + x]: x !== symbol ? parseFloat(this.state.inputArgs[x].absoluteUncertainty) : parseFloat(absoluteUncertainty)
+            }), {});
+
+            values = Object.keys(values)
+                .filter((x) => !isNaN(values[x]))
+                .reduce((o, x) => ({...o, [x]: values[x]}), {});
+
+            fetch(' /calculate', {
+                method: "POST",
+                body: JSON.stringify({
+                    "expr": this.state.inputExpression,
+                    "args": Object.keys(this.state.inputArgs).filter(
+                        (x) => x !== symbol ? this.state.inputArgs[x].absoluteUncertainty : absoluteUncertainty
+                    ),
+                    "vars": Object.keys(this.state.inputArgs).filter(
+                        (x) => x !== symbol ? this.state.inputArgs[x].value >= 0 : value >= 0
+                    ),
+                    "values": Object.keys(values)
+                        .filter((x) => !isNaN(values[x]))
+                        .reduce((o, x) => ({...o, [x]: values[x]}), {}),
+                    "refine": true
+                }),
+                headers: {
+                    "Content-type": "application/json"
+                }
+            })
+                .then((response) => response.json())
+                .then(
+                    (responseData) => this.setState(
+                        update(this.state, {
+                            status: {
+                                $set: [value, absoluteUncertainty, percentageUncertainty].some(isNaN) ?
+                                    1 : responseData.success ? 0 : 1
+                            },
+                            outputValue: {$set: responseData['value']},
+                            outputAbsoluteUncertainty: {$set: responseData['absoluteUncertainty']},
+                            outputAbsoluteUncertaintyExpression: {$set: responseData['absoluteUncertaintyExpr']},
+                            outputPercentageUncertainty: {$set: responseData['percentageUncertainty'] + '\\%'},
+                            outputFractionalUncertaintyExpression: {$set: responseData['fractionalUncertaintyExpr']}
+                        })
+                    ),
+                    () => fetch(' /calculate', {
+                        method: "POST",
+                        body: JSON.stringify({
+                            "expr": this.state.inputExpression,
+                            "args": Object.keys(this.state.inputArgs).filter(
+                                (x) => x !== symbol ? this.state.inputArgs[x].absoluteUncertainty : absoluteUncertainty
+                            ),
+                            "vars": Object.keys(this.state.inputArgs).filter(
+                                (x) => x !== symbol ? this.state.inputArgs[x].value >= 0 : value >= 0
+                            ),
+                            "values": Object.keys(values)
+                                .filter((x) => !isNaN(values[x]))
+                                .reduce((o, x) => ({...o, [x]: values[x]}), {}),
+                            "refine": false
+                        }),
+                        headers: {
+                            "Content-type": "application/json"
+                        }
+                    })
+                        .then((response) => response.json())
+                        .then((responseData) => this.setState(
+                            update(this.state, {
+                                status: {
+                                    $set: [value, absoluteUncertainty, percentageUncertainty].some(isNaN) ?
+                                        1 : responseData.success ? 0 : 1
+                                },
+                                outputValue: {$set: responseData['value']},
+                                outputAbsoluteUncertainty: {$set: responseData['absoluteUncertainty']},
+                                outputAbsoluteUncertaintyExpression: {$set: responseData['absoluteUncertaintyExpr']},
+                                outputPercentageUncertainty: {$set: responseData['percentageUncertainty'] + '\\%'},
+                                outputFractionalUncertaintyExpression: {$set: responseData['fractionalUncertaintyExpr']}
+                            })
+                        ))
+                )
+        }, this.state.timeout)
     }
 
     render() {

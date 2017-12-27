@@ -79,6 +79,7 @@ def calculate_uncertainties():
     str_args = request.get_json().get('args', [])
     str_vars = request.get_json().get('vars', [])  # positive vars
     values = request.get_json().get('values', {})
+    refine = request.get_json().get('refine', False)
     try:
         expr = Expression.from_string(str_args, str_expr)
     except Exception as e:
@@ -92,9 +93,10 @@ def calculate_uncertainties():
             "percentageUncertainty": ''
         })
     else:
-        assumptions = [sympy.Q.positive(sympy.Symbol(var)) for var in str_vars]
-        absolute_uncertainty_expr = expr.calculate_absolute_uncertainty(*assumptions)
-        fractional_uncertainty_expr = expr.calculate_fractional_uncertainty(*assumptions)
+        assumptions = [sympy.Q.positive(sympy.Symbol(var)) for var in str_vars] \
+                      + [sympy.Q.negative(var) for var in expr.expr.atoms(sympy.Symbol) if str(var) not in str_vars]
+        absolute_uncertainty_expr = expr.calculate_absolute_uncertainty(*assumptions, refine=refine)
+        fractional_uncertainty_expr = expr.calculate_fractional_uncertainty(*assumptions, refine=refine)
         return jsonify({
             "success": True,
             "value": sympy.latex(expr.evaluate(values)),
