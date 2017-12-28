@@ -8,6 +8,9 @@ import StatusIndicator from "./status";
 import round from './rounding';
 
 
+const SERVER_URL = process.env.NODE_ENV === 'production' ? '' : 'http://127.0.0.1:5000';
+
+
 class App extends Component {
     constructor() {
         super(...arguments);
@@ -71,7 +74,7 @@ class App extends Component {
                 return;
             }
 
-            fetch('/parse', {
+            fetch(SERVER_URL + '/parse', {
                 method: "POST",
                 body: JSON.stringify({"expr": expression}),
                 headers: {
@@ -156,7 +159,7 @@ class App extends Component {
                 .filter((x) => !isNaN(values[x]))
                 .reduce((o, x) => ({...o, [x]: values[x]}), {});
 
-            fetch('/calculate', {
+            fetch(SERVER_URL + '/calculate', {
                 method: "POST",
                 body: JSON.stringify({
                     "expr": this.state.inputExpression,
@@ -191,7 +194,7 @@ class App extends Component {
                             outputFractionalUncertaintyExpression: {$set: responseData['fractionalUncertaintyExpr']}
                         })
                     ),
-                    () => fetch('/calculate', {
+                    () => fetch(SERVER_URL + '/calculate', {
                         method: "POST",
                         body: JSON.stringify({
                             "expr": this.state.inputExpression,

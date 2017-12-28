@@ -1,11 +1,11 @@
 from flask import Flask, render_template, send_from_directory, request, jsonify
 from flask_cors import CORS
-from core.IB import Expression
+from core import Expression
 import sympy
 
 app = Flask(__name__,
-            static_folder='frontend/build/static',
-            template_folder='frontend/build/'
+            static_folder='build/static',
+            template_folder='build/'
             )
 CORS(app)
 
@@ -20,12 +20,7 @@ def run_app():
 
 @app.route('/favicon.ico')
 def send_favicon():
-    return send_from_directory('frontend/build', 'favicon.ico')
-
-
-@app.route('/service-worker.js')
-def send_service_worker():
-    return send_from_directory('frontend/build', 'service-worker.js')
+    return send_from_directory('build', 'favicon.ico')
 
 
 #######
@@ -82,8 +77,7 @@ def calculate_uncertainties():
     refine = request.get_json().get('refine', False)
     try:
         expr = Expression.from_string(str_args, str_expr)
-        assumptions = [sympy.Q.positive(sympy.Symbol(var)) for var in str_vars] \
-                      + [sympy.Q.negative(var) for var in expr.expr.atoms(sympy.Symbol) if str(var) not in str_vars]
+        assumptions = [sympy.Q.positive(sympy.Symbol(var)) for var in str_vars]
         absolute_uncertainty_expr = expr.calculate_absolute_uncertainty(*assumptions, refine=refine)
         fractional_uncertainty_expr = expr.calculate_fractional_uncertainty(*assumptions, refine=refine)
         return jsonify({

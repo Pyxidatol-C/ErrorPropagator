@@ -5,16 +5,19 @@
   "dependencies": {
     "immutability-helper": "^2.6.2",
     "prop-types": "^15.6.0",
-    "react": "^15.3.2",
-    "react-dom": "^15.3.2",
-    "react-latex": "^1.0.1",
+    "react": "^16.2.0",
+    "react-dom": "^16.2.0",
+    "react-latex": "^1.1.0",
     "react-scripts": "1.0.17",
     "whatwg-fetch": "^2.0.3"
   },
   "scripts": {
-    "start": "react-scripts start",
+    "start": "concurrently --kill-others \"python server.py\" \"react-scripts start\"",
     "build": "react-scripts build",
     "test": "react-scripts test --env=jsdom",
     "eject": "react-scripts eject"
+  },
+  "devDependencies": {
+    "concurrently": "^3.5.1"
   }
 }

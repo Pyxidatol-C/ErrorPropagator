@@ -57,7 +57,7 @@ class Expression:
     def calculate_absolute_uncertainty(self, *assumptions: List[AppliedPredicate],
                                        refine: bool = False,
                                        delta_char: str = '\\Delta ') -> 'Expression':
-        """Calculate the absolute uncertainty in the expression, assuming all args given are independent.
+        """Calculate the absolute uncertainty in the expression (IB way), assuming all args given are independent.
 
         :return: the absolute uncertainty of this expression
         :rtype: Expression
@@ -84,7 +84,7 @@ class Expression:
     def calculate_fractional_uncertainty(self, *assumptions: List[AppliedPredicate],
                                          refine: bool = False,
                                          delta_char: str = '\\Delta ') -> 'Expression':
-        """Calculate the absolute uncertainty in the expression, assuming all args given are independent.
+        """Calculate the absolute uncertainty in the expression (IB way), assuming all args given are independent.
 
         :return: the fractional uncertainty of this expression
         :rtype: Expression
