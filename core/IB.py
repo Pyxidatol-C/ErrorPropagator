@@ -72,7 +72,7 @@ class Expression:
         global_assumptions.add(*assumptions)
 
         for var in self.args:
-            d_var = sympy.Symbol(delta_char + var.name)
+            d_var = sympy.Symbol(delta_char + sympy.latex(var))
             uncertainty_args.append(d_var)
             uncertainty_expr += sympy.Abs(self.expr.diff(var)) * d_var
             global_assumptions.add(sympy.Q.positive(var))

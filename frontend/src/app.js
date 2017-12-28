@@ -149,7 +149,7 @@ class App extends Component {
             let values = Object.keys(this.state.inputArgs).reduce((o, x) => ({
                 ...o,
                 [x]: x !== symbol ? parseFloat(this.state.inputArgs[x].value) : parseFloat(value),
-                ['\\Delta ' + x]: x !== symbol ? parseFloat(this.state.inputArgs[x].absoluteUncertainty) : parseFloat(absoluteUncertainty)
+                ['\\Delta ' + this.state.inputArgs[x].latex]: x !== symbol ? parseFloat(this.state.inputArgs[x].absoluteUncertainty) : parseFloat(absoluteUncertainty)
             }), {});
 
             values = Object.keys(values)
