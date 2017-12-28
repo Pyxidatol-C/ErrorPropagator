@@ -1,13 +1,14 @@
 import React, {Component} from 'react';
-import * as Latex from 'react-latex';
+import {Tex} from 'react-tex';
 import PropTypes from 'prop-types';
 
 
 class LatexDisplay extends Component {
     render() {
         let contents = this.props.contents.filter((x) => x);
-        contents = contents.length >= (this.props.minItemsRequired || 1) ? contents.join(this.props.connector || ' = ') : '';
-        return <span style={{display: "block"}}><Latex>{contents ? '$' + contents + '$' : ''}</Latex></span>
+        let visible = contents.length >= (this.props.minItemsRequired || 1);
+        contents = contents.join(this.props.connector || ' = ');
+        return <div style={{display: visible ? "block" : "none"}}><Tex texContent={contents}/></div>
     }
 }
 
