@@ -44,16 +44,15 @@ def get_symbols():
     str_expr = request.get_json().get('expr')
     try:
         expr = sympy.sympify(str_expr, evaluate=False)
+        success = True
+        symbols = expr.atoms(sympy.Symbol)
+        str_symbols = sorted([(str(symbol), sympy.latex(symbol)) for symbol in symbols])
+        expression = sympy.latex(expr)
     except Exception as e:
         success = False
         str_symbols = []
         expression = ''
         print(e)
-    else:
-        success = True
-        symbols = expr.atoms(sympy.Symbol)
-        str_symbols = sorted([(str(symbol), sympy.latex(symbol)) for symbol in symbols])
-        expression = sympy.latex(expr)
     return jsonify({
         'success': success,
         'symbols': str_symbols,
@@ -79,9 +78,22 @@ def calculate_uncertainties():
     str_args = request.get_json().get('args', [])
     str_vars = request.get_json().get('vars', [])  # positive vars
     values = request.get_json().get('values', {})
+    prec = request.get_json().get('prec', 3)
     refine = request.get_json().get('refine', False)
     try:
         expr = Expression.from_string(str_args, str_expr)
+        assumptions = [sympy.Q.positive(sympy.Symbol(var)) for var in str_vars] \
+                      + [sympy.Q.negative(var) for var in expr.expr.atoms(sympy.Symbol) if str(var) not in str_vars]
+        absolute_uncertainty_expr = expr.calculate_absolute_uncertainty(*assumptions, refine=refine)
+        fractional_uncertainty_expr = expr.calculate_fractional_uncertainty(*assumptions, refine=refine)
+        return jsonify({
+            "success": True,
+            "value": sympy.latex(expr.evaluate(values, precision=prec)),
+            "absoluteUncertaintyExpr": absolute_uncertainty_expr.to_latex(),
+            "absoluteUncertainty": sympy.latex(absolute_uncertainty_expr.evaluate(values, precision=prec)),
+            "fractionalUncertaintyExpr": fractional_uncertainty_expr.to_latex(),
+            "percentageUncertainty": sympy.latex(fractional_uncertainty_expr.evaluate(values, precision=prec) * 100)
+        })
     except Exception as e:
         print(e)
         return jsonify({
@@ -91,19 +103,6 @@ def calculate_uncertainties():
             "absoluteUncertainty": '',
             "fractionalUncertaintyExpr": '',
             "percentageUncertainty": ''
-        })
-    else:
-        assumptions = [sympy.Q.positive(sympy.Symbol(var)) for var in str_vars] \
-                      + [sympy.Q.negative(var) for var in expr.expr.atoms(sympy.Symbol) if str(var) not in str_vars]
-        absolute_uncertainty_expr = expr.calculate_absolute_uncertainty(*assumptions, refine=refine)
-        fractional_uncertainty_expr = expr.calculate_fractional_uncertainty(*assumptions, refine=refine)
-        return jsonify({
-            "success": True,
-            "value": sympy.latex(expr.evaluate(values)),
-            "absoluteUncertaintyExpr": absolute_uncertainty_expr.to_latex(),
-            "absoluteUncertainty": sympy.latex(absolute_uncertainty_expr.evaluate(values)),
-            "fractionalUncertaintyExpr": fractional_uncertainty_expr.to_latex(),
-            "percentageUncertainty": sympy.latex(fractional_uncertainty_expr.evaluate(values) * 100)
         })
 
 

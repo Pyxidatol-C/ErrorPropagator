@@ -5,6 +5,7 @@ import InputRow from "./input";
 import LatexDisplay from "./display";
 import Header from "./header";
 import StatusIndicator from "./status";
+import round from './rounding';
 
 
 class App extends Component {
@@ -36,7 +37,13 @@ class App extends Component {
             outputFractionalUncertaintyExpression: '',
             outputPercentageUncertainty: '',
             status: 0,
-            timeout: 300
+            settings: {
+                hover: false,
+                visible: false,
+                reset: false,
+                timeout: 300,
+                prec: 3
+            }
         }
     }
 
@@ -89,7 +96,7 @@ class App extends Component {
                         outputExpression: {$set: responseData['latex']},
                     })
                 ))
-        }, this.state.timeout)
+        }, this.state.settings.timeout)
     }
 
     handleInputArgValueChange(e, symbol, changeType) {
@@ -107,7 +114,7 @@ class App extends Component {
         if (changeType === 'absoluteUncertainty') {
             absoluteUncertainty = e.target.value;
             if (!isNaN(parseFloat(value)) && !isNaN(parseFloat(absoluteUncertainty))) {
-                percentageUncertainty = absoluteUncertainty / value * 100;
+                percentageUncertainty = round(absoluteUncertainty / value * 100, this.state.settings.prec);
             } else {
                 percentageUncertainty = '';
             }
@@ -115,7 +122,7 @@ class App extends Component {
         if (changeType === 'percentageUncertainty') {
             percentageUncertainty = e.target.value;
             if (!isNaN(parseFloat(value)) && !isNaN(parseFloat(percentageUncertainty))) {
-                absoluteUncertainty = percentageUncertainty * value / 100;
+                absoluteUncertainty = round(percentageUncertainty * value / 100, this.state.settings.prec);
             } else {
                 absoluteUncertainty = '';
             }
@@ -149,7 +156,7 @@ class App extends Component {
                 .filter((x) => !isNaN(values[x]))
                 .reduce((o, x) => ({...o, [x]: values[x]}), {});
 
-            fetch(' /calculate', {
+            fetch('/calculate', {
                 method: "POST",
                 body: JSON.stringify({
                     "expr": this.state.inputExpression,
@@ -162,6 +169,7 @@ class App extends Component {
                     "values": Object.keys(values)
                         .filter((x) => !isNaN(values[x]))
                         .reduce((o, x) => ({...o, [x]: values[x]}), {}),
+                    "prec": this.state.settings.prec,
                     "refine": true
                 }),
                 headers: {
@@ -183,7 +191,7 @@ class App extends Component {
                             outputFractionalUncertaintyExpression: {$set: responseData['fractionalUncertaintyExpr']}
                         })
                     ),
-                    () => fetch(' /calculate', {
+                    () => fetch('/calculate', {
                         method: "POST",
                         body: JSON.stringify({
                             "expr": this.state.inputExpression,
@@ -196,6 +204,7 @@ class App extends Component {
                             "values": Object.keys(values)
                                 .filter((x) => !isNaN(values[x]))
                                 .reduce((o, x) => ({...o, [x]: values[x]}), {}),
+                            "prec": this.state.prec,
                             "refine": false
                         }),
                         headers: {
@@ -217,7 +226,7 @@ class App extends Component {
                             })
                         ))
                 )
-        }, this.state.timeout)
+        }, this.state.settings.timeout)
     }
 
     render() {
@@ -274,6 +283,84 @@ class App extends Component {
                             </tr>
                         )
                     })}
+                    </tbody>
+                </table>
+                <button
+                    onClick={() => this.setState(update(this.state, {settings: {visible: {$set: !this.state.settings.visible}}}))}
+                    onMouseEnter={() => this.setState(update(this.state, {settings: {hover: {$set: true}}}))}
+                    onMouseLeave={() => this.setState(update(this.state, {settings: {hover: {$set: false}}}))}
+                >
+                    <div style={{
+                        transform: this.state.settings.hover ? 'rotate(360deg)' : '',
+                        transition: this.state.settings.hover ? '0.5s' : ''
+                    }}>
+                        &#9881;
+                    </div>
+                </button>
+                <table style={{visibility: this.state.settings.visible ? 'visible' : 'hidden'}}>
+                    <thead>
+                    <tr>
+                        <th>Precision</th>
+                        <th>Lag</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td><input value={this.state.settings.prec}
+                                   type="range"
+                                   min="1"
+                                   max="8"
+                                   onChange={(e) =>
+                                       this.setState(update(this.state, {
+                                           settings: {
+                                               prec: {
+                                                   $set: e.target.value
+                                               }
+                                           }
+                                       }))
+                                   }/></td>
+                        <td><input value={this.state.settings.timeout / 1000}
+                                   type="range"
+                                   min="0"
+                                   max="1"
+                                   step="0.1"
+                                   onChange={(e) =>
+                                       this.setState(update(this.state, {
+                                           settings: {
+                                               timeout: {
+                                                   $set: e.target.value * 1000
+                                               }
+                                           }
+                                       }))}
+                        /></td>
+                    </tr>
+                    <tr>
+                        <td>{this.state.settings.prec}</td>
+                        <td>{this.state.settings.timeout / 1000} sec</td>
+                        <td style={{
+                            transition: this.state.settings.reset ? '0.5s' : '',
+                            transform: this.state.settings.reset ? 'rotate(360deg)' : ''
+                        }}
+                            onClick={() => {
+                                this.setState(update(this.state, {
+                                        settings: {
+                                            prec: {
+                                                $set: 3
+                                            },
+                                            timeout: {
+                                                $set: 300
+                                            },
+                                            reset: {
+                                                $set: true
+                                            }
+                                        }
+                                    }
+                                ));
+                                setTimeout(() => this.setState(update(this.state, {settings: {reset: {$set: false}}})), 500)
+                            }}>
+                            &#8635;
+                        </td>
+                    </tr>
                     </tbody>
                 </table>
             </div>
