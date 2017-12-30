@@ -1,20 +1,20 @@
 import React, {Component} from 'react';
+import PropTypes from 'prop-types';
 
 
 class Header extends Component {
     render() {
         return (
-            <h1 className='header'
-                style={{
-                    fontFamily: ["American Typewriter", "sans-serif"],
-                    fontSize: 32,
-                    backgroundColor: "lightGoldenRodYellow"
-                }}>
-                +-Error*/Propagator^√
-            </h1>
+            <div className={'header ' + {0: 'ok', 1: 'error', 2: 'loading'}[this.props.status]}>
+                誤差幾何？
+            </div>
         )
     }
 }
+
+Header.propTypes = {
+    status: PropTypes.number
+};
 
 
 export default Header

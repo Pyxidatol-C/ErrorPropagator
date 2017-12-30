@@ -1,0 +1,45 @@
+body {
+    background: whitesmoke;
+    width: 70%;
+    margin: 0 auto;
+    display: block;
+    font-size: 24px;
+    font-family: 'Menlo', 'Consolas', sans-serif;
+}
+
+hr {
+    height: 10px;
+    border: 0;
+    box-shadow: 0 10px 10px -10px #8c8b8b inset;
+}
+
+.header {
+    font-size: 32px;
+    text-align: center;
+    background: lightgoldenrodyellow;
+}
+
+.hidden {
+    display: none;
+}
+
+div .rotate {
+    transform: rotate(360deg);
+    transition: 0.5s;
+}
+
+.ok {
+    color: mediumaquamarine;
+}
+
+.error {
+    color: indianred;
+}
+
+.loading {
+    color: sandybrown;
+}
+
+.description {
+    font-size: 16px;
+}

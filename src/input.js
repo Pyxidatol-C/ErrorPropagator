@@ -3,6 +3,9 @@ import PropTypes from 'prop-types';
 
 
 class InputRow extends Component {
+    focus() {
+        this.input.focus()
+    }
 
     render() {
         return (
@@ -12,6 +15,7 @@ class InputRow extends Component {
                        aria-label={this.props.prompt}
                        value={this.props.value}
                        onChange={this.props.handleChange}
+                       ref={(input) => {this.input = input}}
                 />
             </div>
         )

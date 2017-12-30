@@ -4,8 +4,9 @@ import 'whatwg-fetch';
 import InputRow from "./input";
 import LatexDisplay from "./display";
 import Header from "./header";
-import StatusIndicator from "./status";
 import round from './rounding';
+import './app.css';
+import Description from "./description";
 
 
 const SERVER_URL = process.env.NODE_ENV === 'production' ? '' : 'http://127.0.0.1:5000';
@@ -43,7 +44,7 @@ class App extends Component {
             outputPercentageUncertainty: '',
             status: 0,
             settings: {
-                hover: false,
+                clicked: false,
                 visible: false,
                 reset: false,
                 timeout: 300,
@@ -53,52 +54,58 @@ class App extends Component {
     }
 
     componentDidMount() {
-        this.fromUrl();
+        const paramGetter = new URL(window.location.href);
+        const expr = decodeURIComponent(window.location.pathname.split('/')[1]);
+        this.fromUrl(expr, paramGetter);
+        this.exprInput.focus();
     }
 
-    fromUrl() {
-        let paramGetter = new URL(window.location.href);
-        let expr = decodeURIComponent(window.location.pathname.split('/')[1]);
+    componentDidUpdate() {
+        this.toUrl();
+    }
+
+    fromUrl(expr, paramGetter) {
         this.setState(update(this.state, {
-            inputExpression: {$set: expr},
-            status: {$set: 2}
-        }));
-        fetch(SERVER_URL + '/parse', {
-            method: "POST",
-            body: JSON.stringify({"expr": expr}),
-            headers: {
-                "Content-type": "application/json"
-            },
-        })
-            .then((response) => response.json())
-            .then((responseData) => this.setState(
-                update(this.state, {
-                    status: {$set: responseData['success'] ? 0 : expr ? 1 : 0},
-                    inputArgs: {
-                        $set: responseData['symbols'].reduce((o, key) => ({
-                            ...o,
-                            [key[0]]: {
-                                latex: key[1],
-                                value: paramGetter.searchParams.get(key[0]) || '',
-                                absoluteUncertainty: paramGetter.searchParams.get('Δ' + key[0]) || '',
-                                percentageUncertainty: paramGetter.searchParams.get('%Δ' + key[0]) || ''
-                            }
-                        }), {})
-                    },
-                    outputExpression: {$set: responseData['latex']},
-                }),
-                () => {
-                    if (expr && window.location.href.includes('?')) {
-                        this.handleInputArgValueChange('', '', 'load')
+                inputExpression: {$set: expr},
+                status: {$set: 2}
+            }), () => fetch(SERVER_URL + '/parse', {
+                method: "POST",
+                body: JSON.stringify({"expr": expr}),
+                headers: {
+                    "Content-type": "application/json"
+                },
+            })
+                .then((response) => response.json())
+                .then((responseData) => this.setState(
+                    update(this.state, {
+                        status: {$set: responseData['success'] ? 0 : expr ? 1 : 0},
+                        inputArgs: {
+                            $set: responseData['symbols'].reduce((o, key) => ({
+                                ...o,
+                                [key[0]]: {
+                                    latex: key[1],
+                                    value: paramGetter.searchParams.get(key[0]) || '',
+                                    absoluteUncertainty: paramGetter.searchParams.get('Δ' + key[0]) || '',
+                                    percentageUncertainty: paramGetter.searchParams.get('%Δ' + key[0]) || ''
+                                }
+                            }), {})
+                        },
+                        outputExpression: {$set: responseData['latex']},
+                    }),
+                    () => {
+                        if (expr && window.location.href.includes('?')) {
+                            this.handleInputArgValueChange('', '', 'load')
+                        }
                     }
-                }
-            ), () => this.setState(update(this.state, {status: {$set: 1}})));
+                ), () => this.setState(update(this.state, {status: {$set: 1}})))
+        )
+
     }
 
     toUrl() {
-        let valuesParameters = Object.keys(this.state.inputArgs)
+        const valuesParameters = Object.keys(this.state.inputArgs)
             .reduce((array, x) => {
-                let value = this.state.inputArgs[x].value,
+                const value = this.state.inputArgs[x].value,
                     delta = this.state.inputArgs[x].absoluteUncertainty,
                     fracDelta = this.state.inputArgs[x].percentageUncertainty;
                 if (value.length) {
@@ -133,42 +140,40 @@ class App extends Component {
                 outputFractionalUncertaintyExpression: {$set: ''},
                 outputPercentageUncertainty: {$set: ''},
                 status: {$set: 2}
-            })
-        );
+            }),
+            () => setTimeout(() => {
+                // this.toUrl();
+                if (this.lastEdited > THIS_EDIT) {
+                    return;
+                }
 
-        setTimeout(() => {
-            this.toUrl();
-            if (this.lastEdited > THIS_EDIT) {
-                return;
-            }
-
-            fetch(SERVER_URL + '/parse', {
-                method: "POST",
-                body: JSON.stringify({"expr": expression}),
-                headers: {
-                    "Content-type": "application/json"
-                },
-            })
-                .then((response) => response.json())
-                .then((responseData) => this.setState(
-                    update(this.state, {
-                        status: {$set: responseData['success'] ? 0 : expression ? 1 : 0},
-                        inputArgs: {
-                            $set: responseData['symbols'].reduce((o, key) => ({
-                                ...o,
-                                [key[0]]: {
-                                    latex: key[1],
-                                    value: '',
-                                    absoluteUncertainty: '',
-                                    percentageUncertainty: ''
-                                }
-                            }), {})
-                        },
-                        outputExpression: {$set: responseData['latex']},
-                    })
-                ), () => this.setState(update(this.state, {status: {$set: 1}})))
-        }, this.state.settings.timeout)
-
+                fetch(SERVER_URL + '/parse', {
+                    method: "POST",
+                    body: JSON.stringify({"expr": expression}),
+                    headers: {
+                        "Content-type": "application/json"
+                    },
+                })
+                    .then((response) => response.json())
+                    .then((responseData) => this.setState(
+                        update(this.state, {
+                            status: {$set: responseData['success'] ? 0 : expression ? 1 : 0},
+                            inputArgs: {
+                                $set: responseData['symbols'].reduce((o, key) => ({
+                                    ...o,
+                                    [key[0]]: {
+                                        latex: key[1],
+                                        value: '',
+                                        absoluteUncertainty: '',
+                                        percentageUncertainty: ''
+                                    }
+                                }), {})
+                            },
+                            outputExpression: {$set: responseData['latex']},
+                        })
+                    ), () => this.setState(update(this.state, {status: {$set: 1}})))
+            }, this.state.settings.timeout)
+        )
     }
 
     handleInputArgValueChange(inputValue, symbol, changeType) {
@@ -220,9 +225,6 @@ class App extends Component {
         setTimeout(() => {
             if (this.lastEdited > THIS_EDIT) {
                 return;
-            }
-            if (changeType !== 'load') {
-                this.toUrl();
             }
 
             let values = Object.keys(this.state.inputArgs).reduce((o, x) => ({
@@ -311,11 +313,10 @@ class App extends Component {
     render() {
         return (
             <div>
-                <Header/>
-                <StatusIndicator statusCode={this.state.status}/>
+                <Header status={this.state.status}/>
                 <hr/>
-
                 <InputRow value={this.state.inputExpression}
+                          ref={(exprInput) => {this.exprInput = exprInput}}
                           prompt={"y="}
                           placeholder='a + b + c'
                           handleChange={(e) => this.handleInputExpressionChange(e.target.value)}/>
@@ -330,9 +331,7 @@ class App extends Component {
                     contents={['\\frac{\\Delta y}{y}', this.state.outputFractionalUncertaintyExpression, this.state.outputPercentageUncertainty]}
                     minItemsRequired={2}/>
 
-                <table style={{
-                    display: Object.keys(this.state.inputArgs).length > 0 ? 'unset' : 'none',
-                }}>
+                <table className={Object.keys(this.state.inputArgs).length > 0 ? '' : 'hidden'}>
                     <thead>
                     <tr>
                         <th/>
@@ -368,18 +367,21 @@ class App extends Component {
                     </tbody>
                 </table>
                 <button
-                    onClick={() => this.setState(update(this.state, {settings: {visible: {$set: !this.state.settings.visible}}}))}
-                    onMouseEnter={() => this.setState(update(this.state, {settings: {hover: {$set: true}}}))}
-                    onMouseLeave={() => this.setState(update(this.state, {settings: {hover: {$set: false}}}))}
+                    onClick={() => {
+                        this.setState(update(this.state, {
+                            settings: {
+                                visible: {$set: !this.state.settings.visible},
+                                clicked: {$set: true}
+                            }
+                        }));
+                        setTimeout(() => this.setState(update(this.state, {settings: {clicked: {$set: false}}})), 500);
+                    }}
                 >
-                    <div style={{
-                        transform: this.state.settings.hover ? 'rotate(360deg)' : '',
-                        transition: this.state.settings.hover ? '0.5s' : ''
-                    }}>
+                    <div className={this.state.settings.clicked ? 'rotate' : ''}>
                         &#9881;
                     </div>
                 </button>
-                <table style={{visibility: this.state.settings.visible ? 'visible' : 'hidden'}}>
+                <table className={this.state.settings.visible ? '' : 'hidden'}>
                     <thead>
                     <tr>
                         <th>Precision</th>
@@ -419,10 +421,7 @@ class App extends Component {
                     <tr>
                         <td>{this.state.settings.prec}</td>
                         <td>{this.state.settings.timeout / 1000} sec</td>
-                        <td style={{
-                            transition: this.state.settings.reset ? '0.5s' : '',
-                            transform: this.state.settings.reset ? 'rotate(360deg)' : ''
-                        }}
+                        <td className={this.state.settings.reset ? 'rotate' : ''}
                             onClick={() => {
                                 this.setState(update(this.state, {
                                         settings: {
@@ -445,6 +444,7 @@ class App extends Component {
                     </tr>
                     </tbody>
                 </table>
+                <Description visible={Object.keys(this.state.inputArgs).length === 0}/>
             </div>
         )
     }

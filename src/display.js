@@ -8,7 +8,7 @@ class LatexDisplay extends Component {
         let contents = this.props.contents.filter((x) => x);
         let visible = contents.length >= (this.props.minItemsRequired || 1);
         contents = contents.join(this.props.connector || ' = ');
-        return <div style={{display: visible ? "block" : "none"}}><Tex texContent={contents}/></div>
+        return <div className={visible ? "" : "hidden"}><Tex texContent={contents}/></div>
     }
 }
 
