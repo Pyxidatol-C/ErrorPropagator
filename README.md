@@ -1,6 +1,8 @@
-# ErrorPropagator
-A calculator designed for propagation of uncertainties. 
+# ErrorPropagator / 误差几何?
+A calculator designed for propagation of uncertainties.  
+Use online: [https://wucha.herokuapp.com](https://wucha.herokuapp.com) 
 
+## Background
 In the IB physics syllabus, sub-topic 1.2 treats uncertainties and errors. 
 Specifically, the following formulae are given:
 - If: `y = a ± b`, then: `Δy = Δa + Δb`
@@ -14,7 +16,11 @@ that the IB uses an approximation of the variance formula which assumes independ
 Δf(x, y, z, ...) = ∑ |∂f / ∂i| Δi, i = x, y, z, ...
 ```
 
-Using sympy, I built (hopefully) a calculator that propagates the uncertainty using the above formula.
+Using sympy, I built a calculator that propagates the uncertainty using the above formula.
 This calculator might come in handy for analysis in lab reports when you have complex equations.
 
+## Tech stack
+- backend: Python `Flask`
+- frontend: Javascript `React`
+- hosting: `Heroku` (with python and node.js buildpacks) 
  
