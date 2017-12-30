@@ -13,8 +13,10 @@ CORS(app)
 #########
 # Files
 #########
-@app.route('/', methods=['GET'])
-def run_app():
+@app.route('/', defaults={'expr': ''})
+@app.route('/<path:expr>', methods=['GET'])
+def run_app(expr):
+    print(f"Load {expr}")
     return render_template('index.html')
 
 

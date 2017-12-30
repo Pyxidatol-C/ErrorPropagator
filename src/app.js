@@ -12,6 +12,8 @@ const SERVER_URL = process.env.NODE_ENV === 'production' ? '' : 'http://127.0.0.
 
 
 class App extends Component {
+    lastEdited = new Date();
+
     constructor() {
         super(...arguments);
         this.state = {
@@ -50,11 +52,76 @@ class App extends Component {
         }
     }
 
-    lastEdited = new Date();
+    componentDidMount() {
+        this.fromUrl();
+    }
 
-    handleInputExpressionChange(e) {
+    fromUrl() {
+        let paramGetter = new URL(window.location.href);
+        let expr = decodeURIComponent(window.location.pathname.split('/')[1]);
+        this.setState(update(this.state, {
+            inputExpression: {$set: expr},
+            status: {$set: 2}
+        }));
+        fetch(SERVER_URL + '/parse', {
+            method: "POST",
+            body: JSON.stringify({"expr": expr}),
+            headers: {
+                "Content-type": "application/json"
+            },
+        })
+            .then((response) => response.json())
+            .then((responseData) => this.setState(
+                update(this.state, {
+                    status: {$set: responseData['success'] ? 0 : expr ? 1 : 0},
+                    inputArgs: {
+                        $set: responseData['symbols'].reduce((o, key) => ({
+                            ...o,
+                            [key[0]]: {
+                                latex: key[1],
+                                value: paramGetter.searchParams.get(key[0]) || '',
+                                absoluteUncertainty: paramGetter.searchParams.get('Δ' + key[0]) || '',
+                                percentageUncertainty: paramGetter.searchParams.get('%Δ' + key[0]) || ''
+                            }
+                        }), {})
+                    },
+                    outputExpression: {$set: responseData['latex']},
+                }),
+                () => {
+                    if (expr && window.location.href.includes('?')) {
+                        this.handleInputArgValueChange('', '', 'load')
+                    }
+                }
+            ), () => this.setState(update(this.state, {status: {$set: 1}})));
+    }
+
+    toUrl() {
+        let valuesParameters = Object.keys(this.state.inputArgs)
+            .reduce((array, x) => {
+                let value = this.state.inputArgs[x].value,
+                    delta = this.state.inputArgs[x].absoluteUncertainty,
+                    fracDelta = this.state.inputArgs[x].percentageUncertainty;
+                if (value.length) {
+                    array.push(`${x}=${value}`);
+                }
+                if (delta.length) {
+                    array.push(`Δ${x}=${delta}`)
+                }
+                if (fracDelta.length) {
+                    array.push(`%Δ${x}=${fracDelta}`)
+                }
+                return array
+            }, [])
+            .join('&');
+        window.history.pushState(
+            {expr: this.state.inputExpression, values: this.state.inputArgs},
+            `误差 | ${this.state.inputExpression}`,
+            '/' + encodeURIComponent(this.state.inputExpression) + (valuesParameters.length ? ('?' + valuesParameters) : '')
+        )
+    }
+
+    handleInputExpressionChange(expression) {
         const THIS_EDIT = this.lastEdited = new Date();
-        let expression = e.target.value;
         this.setState(
             update(this.state, {
                 inputExpression: {$set: expression},
@@ -70,6 +137,7 @@ class App extends Component {
         );
 
         setTimeout(() => {
+            this.toUrl();
             if (this.lastEdited > THIS_EDIT) {
                 return;
             }
@@ -84,7 +152,7 @@ class App extends Component {
                 .then((response) => response.json())
                 .then((responseData) => this.setState(
                     update(this.state, {
-                        status: {$set: responseData['success'] ? 0 : 1},
+                        status: {$set: responseData['success'] ? 0 : expression ? 1 : 0},
                         inputArgs: {
                             $set: responseData['symbols'].reduce((o, key) => ({
                                 ...o,
@@ -98,55 +166,63 @@ class App extends Component {
                         },
                         outputExpression: {$set: responseData['latex']},
                     })
-                ))
+                ), () => this.setState(update(this.state, {status: {$set: 1}})))
         }, this.state.settings.timeout)
+
     }
 
-    handleInputArgValueChange(e, symbol, changeType) {
-        let value = this.state.inputArgs[symbol].value,
-            absoluteUncertainty = this.state.inputArgs[symbol].absoluteUncertainty,
+    handleInputArgValueChange(inputValue, symbol, changeType) {
+        let value, absoluteUncertainty, percentageUncertainty;
+        const THIS_EDIT = this.lastEdited = new Date();
+        if (changeType !== 'load') {
+            value = this.state.inputArgs[symbol].value;
+            absoluteUncertainty = this.state.inputArgs[symbol].absoluteUncertainty;
             percentageUncertainty = this.state.inputArgs[symbol].percentageUncertainty;
 
-        const THIS_EDIT = this.lastEdited = new Date();
 
-        if (changeType === 'value') {
-            value = e.target.value;
-            absoluteUncertainty = '';
-            percentageUncertainty = '';
-        }
-        if (changeType === 'absoluteUncertainty') {
-            absoluteUncertainty = e.target.value;
-            if (!isNaN(parseFloat(value)) && !isNaN(parseFloat(absoluteUncertainty))) {
-                percentageUncertainty = round(absoluteUncertainty / value * 100, this.state.settings.prec);
-            } else {
+            if (changeType === 'value') {
+                // TODO keep record of whether absolute or percentage uncertainty is last updated, and update the other
+                value = inputValue;
+                absoluteUncertainty = '';
                 percentageUncertainty = '';
             }
-        }
-        if (changeType === 'percentageUncertainty') {
-            percentageUncertainty = e.target.value;
-            if (!isNaN(parseFloat(value)) && !isNaN(parseFloat(percentageUncertainty))) {
-                absoluteUncertainty = round(percentageUncertainty * value / 100, this.state.settings.prec);
-            } else {
-                absoluteUncertainty = '';
+            if (changeType === 'absoluteUncertainty') {
+                absoluteUncertainty = inputValue;
+                if (!isNaN(parseFloat(value)) && !isNaN(parseFloat(absoluteUncertainty))) {
+                    percentageUncertainty = round(absoluteUncertainty / value * 100, this.state.settings.prec);
+                } else {
+                    percentageUncertainty = '';
+                }
             }
-        }
+            if (changeType === 'percentageUncertainty') {
+                percentageUncertainty = inputValue;
+                if (!isNaN(parseFloat(value)) && !isNaN(parseFloat(percentageUncertainty))) {
+                    absoluteUncertainty = round(percentageUncertainty * value / 100, this.state.settings.prec);
+                } else {
+                    absoluteUncertainty = '';
+                }
+            }
 
-        this.setState(
-            update(this.state, {
-                inputArgs: {
-                    [symbol]: {
-                        value: {$set: value},
-                        absoluteUncertainty: {$set: absoluteUncertainty},
-                        percentageUncertainty: {$set: percentageUncertainty}
-                    }
-                },
-                status: {$set: [value, absoluteUncertainty, percentageUncertainty].some(isNaN) ? 1 : 2}
-            })
-        );
+            this.setState(
+                update(this.state, {
+                    inputArgs: {
+                        [symbol]: {
+                            value: {$set: value},
+                            absoluteUncertainty: {$set: absoluteUncertainty},
+                            percentageUncertainty: {$set: percentageUncertainty}
+                        }
+                    },
+                    status: {$set: [value, absoluteUncertainty, percentageUncertainty].some(isNaN) ? 1 : 2}
+                })
+            )
+        }
 
         setTimeout(() => {
             if (this.lastEdited > THIS_EDIT) {
                 return;
+            }
+            if (changeType !== 'load') {
+                this.toUrl();
             }
 
             let values = Object.keys(this.state.inputArgs).reduce((o, x) => ({
@@ -184,7 +260,7 @@ class App extends Component {
                     (responseData) => this.setState(
                         update(this.state, {
                             status: {
-                                $set: [value, absoluteUncertainty, percentageUncertainty].some(isNaN) ?
+                                $set: [value, absoluteUncertainty, percentageUncertainty].some(isNaN) && changeType !== 'load' ?
                                     1 : responseData.success ? 0 : 1
                             },
                             outputValue: {$set: responseData['value']},
@@ -218,7 +294,7 @@ class App extends Component {
                         .then((responseData) => this.setState(
                             update(this.state, {
                                 status: {
-                                    $set: [value, absoluteUncertainty, percentageUncertainty].some(isNaN) ?
+                                    $set: [value, absoluteUncertainty, percentageUncertainty].some(isNaN) && changeType !== 'load' ?
                                         1 : responseData.success ? 0 : 1
                                 },
                                 outputValue: {$set: responseData['value']},
@@ -227,9 +303,9 @@ class App extends Component {
                                 outputPercentageUncertainty: {$set: responseData['percentageUncertainty'] + '\\%'},
                                 outputFractionalUncertaintyExpression: {$set: responseData['fractionalUncertaintyExpr']}
                             })
-                        ))
+                        ), () => this.setState(update(this.state, {status: {$set: 1}})))
                 )
-        }, this.state.settings.timeout)
+        }, changeType === 'load' ? 0 : this.state.settings.timeout)
     }
 
     render() {
@@ -242,7 +318,7 @@ class App extends Component {
                 <InputRow value={this.state.inputExpression}
                           prompt={"y="}
                           placeholder='a + b + c'
-                          handleChange={this.handleInputExpressionChange.bind(this)}/>
+                          handleChange={(e) => this.handleInputExpressionChange(e.target.value)}/>
                 <hr/>
 
                 <LatexDisplay contents={['y', this.state.outputExpression, this.state.outputValue]}
@@ -272,15 +348,18 @@ class App extends Component {
                                 <th><LatexDisplay contents={[this.state.inputArgs[x].latex]}/></th>
                                 <td>
                                     <input value={this.state.inputArgs[x].value}
-                                           onChange={(e) => this.handleInputArgValueChange(e, x, 'value')}/>
+                                           aria-label={"value of " + x}
+                                           onChange={(e) => this.handleInputArgValueChange(e.target.value, x, 'value')}/>
                                 </td>
                                 <td>
                                     <input value={this.state.inputArgs[x].absoluteUncertainty}
-                                           onChange={(e) => this.handleInputArgValueChange(e, x, 'absoluteUncertainty')}/>
+                                           aria-label={"absolute uncertainty of " + x}
+                                           onChange={(e) => this.handleInputArgValueChange(e.target.value, x, 'absoluteUncertainty')}/>
                                 </td>
                                 <td>
                                     <input value={this.state.inputArgs[x].percentageUncertainty}
-                                           onChange={(e) => this.handleInputArgValueChange(e, x, 'percentageUncertainty')}/>
+                                           aria-label={"percentage uncertainty of " + x}
+                                           onChange={(e) => this.handleInputArgValueChange(e.target.value, x, 'percentageUncertainty')}/>
                                     %
                                 </td>
                             </tr>

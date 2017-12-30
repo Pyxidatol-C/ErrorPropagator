@@ -9,6 +9,7 @@ class InputRow extends Component {
             <div className='inputRow'>
                 {this.props.prompt}
                 <input placeholder={this.props.placeholder}
+                       aria-label={this.props.prompt}
                        value={this.props.value}
                        onChange={this.props.handleChange}
                 />
