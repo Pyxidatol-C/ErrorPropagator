@@ -336,8 +336,8 @@ class App extends Component {
                     <tr>
                         <th/>
                         <th><LatexDisplay contents={['x']}/></th>
-                        <th><LatexDisplay contents={['\\Delta x']}/></th>
-                        <th><LatexDisplay contents={['\\frac{\\Delta x}{x}']}/></th>
+                        <th><LatexDisplay contents={['\\pm \\Delta x']}/></th>
+                        <th><LatexDisplay contents={['\\pm \\frac{\\Delta x}{x}']}/></th>
                     </tr>
                     </thead>
                     <tbody>

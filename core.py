@@ -120,16 +120,19 @@ class Expression:
         return sympy.latex(self.expr)
 
     @classmethod
-    def from_string(cls, args_list: List[str], string: str, ) -> 'Expression':
+    def from_string(cls, args_list: List[str], string: str, constants: Dict[str, float] = None) -> 'Expression':
         """Parse a string expression.
 
         :param string: expression as a string of python expressions
         :param args_list: the list of args / independent variables of the expression as strings
+        :param constants: a list of local variables that are considered while parsing
         :return: an expression taking in the given args
 
         >>> Expression.from_string(['x'], 'sqrt(x) ^ y')
         f(x) = (sqrt(x))**y
+        >>> Expression.from_string(['m'], 'm * g', constants={'g': 9.81})
+        f(m) = 9.81*m
         """
-        parsed_expr = sympy.sympify(string, evaluate=False)  # note: uses eval
+        parsed_expr = sympy.sympify(string, evaluate=False, locals=constants)  # note: uses eval
         args = [symbol for symbol in parsed_expr.atoms(sympy.Symbol) if str(symbol) in args_list]
         return cls(args, parsed_expr)

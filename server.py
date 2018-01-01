@@ -1,6 +1,7 @@
 from flask import Flask, render_template, send_from_directory, request, jsonify
 from flask_cors import CORS
 from core import Expression
+from constants import CONSTANTS
 import sympy
 
 app = Flask(__name__,
@@ -40,11 +41,11 @@ def get_symbols():
     """
     str_expr = request.get_json().get('expr')
     try:
-        expr = sympy.sympify(str_expr, evaluate=False)
+        expr = sympy.sympify(str_expr, evaluate=False, locals=CONSTANTS)
         success = True
         symbols = expr.atoms(sympy.Symbol)
         str_symbols = sorted([(str(symbol), sympy.latex(symbol)) for symbol in symbols])
-        expression = sympy.latex(expr)
+        expression = sympy.latex(sympy.sympify(str_expr))
     except Exception as e:
         success = False
         str_symbols = []
@@ -78,10 +79,11 @@ def calculate_uncertainties():
     prec = request.get_json().get('prec', 3)
     refine = request.get_json().get('refine', False)
     try:
-        expr = Expression.from_string(str_args, str_expr)
+        expr = Expression.from_string(str_args, str_expr, constants=CONSTANTS)
         assumptions = [sympy.Q.positive(sympy.Symbol(var)) for var in str_vars]
         absolute_uncertainty_expr = expr.calculate_absolute_uncertainty(*assumptions, refine=refine)
         fractional_uncertainty_expr = expr.calculate_fractional_uncertainty(*assumptions, refine=refine)
+        values.update(CONSTANTS)
         return jsonify({
             "success": True,
             "value": sympy.latex(expr.evaluate(values, precision=prec)),
