@@ -7,7 +7,9 @@ class LatexDisplay extends Component {
     render() {
         let contents = this.props.contents.filter((x) => x);
         let visible = contents.length >= (this.props.minItemsRequired || 1);
-        contents = contents.join(this.props.connector || ' = ');
+        contents = contents.join(this.props.connector || ' = ')
+            .replace(/\\operatorname/g, '')
+            .replace(/\\substack/g, '');
         return <div className={visible ? "" : "hidden"}><Tex texContent={contents}/></div>
     }
 }
