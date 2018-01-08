@@ -12,7 +12,7 @@
     "whatwg-fetch": "^2.0.3"
   },
   "scripts": {
-    "start": "concurrently --kill-others \"python server.py\" \"react-scripts start\"",
+    "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test --env=jsdom",
     "eject": "react-scripts eject",

@@ -1,7 +1,7 @@
 from flask import Flask, render_template, send_from_directory, request, jsonify
 from flask_cors import CORS
 from core import Expression
-from constants import CONSTANTS
+from constants import CONSTANTS, Ar
 import sympy
 
 app = Flask(__name__,
@@ -40,8 +40,9 @@ def get_symbols():
              - latex: the latex version of the string expression
     """
     str_expr = request.get_json().get('expr')
+    use_constants = request.get_json().get('use_constants', False)
     try:
-        expr = sympy.sympify(str_expr, evaluate=False, locals=CONSTANTS)
+        expr = sympy.sympify(str_expr, evaluate=False, locals=CONSTANTS if use_constants else {'Ar': Ar})
         success = True
         symbols = expr.atoms(sympy.Symbol)
         str_symbols = sorted([(str(symbol), sympy.latex(symbol)) for symbol in symbols])
@@ -78,8 +79,9 @@ def calculate_uncertainties():
     values = request.get_json().get('values', {})
     prec = request.get_json().get('prec', 3)
     refine = request.get_json().get('refine', False)
+    use_constants = request.get_json().get('use_constants', False)
     try:
-        expr = Expression.from_string(str_args, str_expr, constants=CONSTANTS)
+        expr = Expression.from_string(str_args, str_expr, constants=CONSTANTS if use_constants else {'Ar': Ar})
         assumptions = [sympy.Q.positive(sympy.Symbol(var)) for var in str_vars]
         absolute_uncertainty_expr = expr.calculate_absolute_uncertainty(*assumptions, refine=refine)
         fractional_uncertainty_expr = expr.calculate_fractional_uncertainty(*assumptions, refine=refine)

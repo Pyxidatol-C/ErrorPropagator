@@ -47,6 +47,7 @@ class App extends Component {
                 clicked: false,
                 visible: false,
                 reset: false,
+                constants: false,
                 timeout: 300,
                 prec: 3
             }
@@ -67,10 +68,16 @@ class App extends Component {
     fromUrl(expr, paramGetter) {
         this.setState(update(this.state, {
                 inputExpression: {$set: expr},
-                status: {$set: 2}
+                status: {$set: 2},
+                settings: {
+                    constants: {$set: !!paramGetter.searchParams.get('USE_CONSTANTS')}
+                }
             }), () => fetch(SERVER_URL + '/parse', {
                 method: "POST",
-                body: JSON.stringify({"expr": expr}),
+                body: JSON.stringify({
+                    "expr": expr,
+                    "use_constants": this.state.settings.constants
+                }),
                 headers: {
                     "Content-type": "application/json"
                 },
@@ -118,7 +125,7 @@ class App extends Component {
                     array.push(`%Δ${x}=${fracDelta}`)
                 }
                 return array
-            }, [])
+            }, this.state.settings.constants ? ['USE_CONSTANTS=true'] : [])
             .join('&');
         window.history.pushState(
             {expr: this.state.inputExpression, values: this.state.inputArgs},
@@ -149,7 +156,10 @@ class App extends Component {
 
                 fetch(SERVER_URL + '/parse', {
                     method: "POST",
-                    body: JSON.stringify({"expr": expression}),
+                    body: JSON.stringify({
+                        "expr": expression,
+                        "use_constants": this.state.settings.constants
+                    }),
                     headers: {
                         "Content-type": "application/json"
                     },
@@ -251,7 +261,8 @@ class App extends Component {
                         .filter((x) => !isNaN(values[x]))
                         .reduce((o, x) => ({...o, [x]: values[x]}), {}),
                     "prec": this.state.settings.prec,
-                    "refine": true
+                    "refine": true,
+                    "use_constants": this.state.settings.constants
                 }),
                 headers: {
                     "Content-type": "application/json"
@@ -286,7 +297,8 @@ class App extends Component {
                                 .filter((x) => !isNaN(values[x]))
                                 .reduce((o, x) => ({...o, [x]: values[x]}), {}),
                             "prec": this.state.prec,
-                            "refine": false
+                            "refine": false,
+                            "use_constants": this.state.settings.constants
                         }),
                         headers: {
                             "Content-type": "application/json"
@@ -336,8 +348,8 @@ class App extends Component {
                     <tr>
                         <th/>
                         <th><LatexDisplay contents={['x']}/></th>
-                        <th><LatexDisplay contents={['\\pm \\Delta x']}/></th>
-                        <th><LatexDisplay contents={['\\pm \\frac{\\Delta x}{x}']}/></th>
+                        <th><LatexDisplay contents={['\\Delta x']}/></th>
+                        <th><LatexDisplay contents={['\\frac{\\Delta x}{x}']}/></th>
                     </tr>
                     </thead>
                     <tbody>
@@ -381,11 +393,12 @@ class App extends Component {
                         &#9881;
                     </div>
                 </button>
-                <table className={this.state.settings.visible ? '' : 'hidden'}>
+                <table className={(this.state.settings.visible ? '' : 'hidden') + ' settings'}>
                     <thead>
                     <tr>
                         <th>Precision</th>
                         <th>Lag</th>
+                        <th>Constants</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -417,12 +430,23 @@ class App extends Component {
                                            }
                                        }))}
                         /></td>
+                        <td><input checked={this.state.settings.constants}
+                                   type="checkbox"
+                                   onClick={() => this.setState(update(this.state, {
+                                       settings: {
+                                           constants: {
+                                               $set: !this.state.settings.constants
+                                           }
+                                       }
+                                   }), () => window.location.reload())}
+                        /></td>
                     </tr>
                     <tr>
                         <td>{this.state.settings.prec}</td>
                         <td>{this.state.settings.timeout / 1000} sec</td>
                         <td className={this.state.settings.reset ? 'rotate' : ''}
                             onClick={() => {
+                                const resetConstantUse = this.state.settings.constants;
                                 this.setState(update(this.state, {
                                         settings: {
                                             prec: {
@@ -431,12 +455,15 @@ class App extends Component {
                                             timeout: {
                                                 $set: 300
                                             },
+                                            constants: {
+                                                $set: false
+                                            },
                                             reset: {
                                                 $set: true
                                             }
                                         }
                                     }
-                                ));
+                                ), () => resetConstantUse ? window.location.reload() : null);
                                 setTimeout(() => this.setState(update(this.state, {settings: {reset: {$set: false}}})), 500)
                             }}>
                             &#8635;
