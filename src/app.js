@@ -7,6 +7,7 @@ import Header from "./header";
 import round from './rounding';
 import './app.css';
 import Description from "./description";
+import {Tex} from "react-tex";
 
 
 const SERVER_URL = process.env.NODE_ENV === 'production' ? '' : 'http://127.0.0.1:5000';
@@ -344,34 +345,31 @@ class App extends Component {
                     minItemsRequired={2}/>
 
                 <table className={Object.keys(this.state.inputArgs).length > 0 ? '' : 'hidden'}>
-                    <thead>
-                    <tr>
-                        <th/>
-                        <th><LatexDisplay contents={['x']}/></th>
-                        <th><LatexDisplay contents={['\\Delta x']}/></th>
-                        <th><LatexDisplay contents={['\\frac{\\Delta x}{x}']}/></th>
-                    </tr>
-                    </thead>
                     <tbody>
                     {Object.keys(this.state.inputArgs).map((x) => {
                         return (
                             <tr key={x}>
-                                <th><LatexDisplay contents={[this.state.inputArgs[x].latex]}/></th>
+                                <th>
+                                    <Tex texContent={this.state.inputArgs[x].latex + '='}/>
+                                </th>
                                 <td>
                                     <input value={this.state.inputArgs[x].value}
                                            aria-label={"value of " + x}
                                            onChange={(e) => this.handleInputArgValueChange(e.target.value, x, 'value')}/>
                                 </td>
                                 <td>
+                                    <Tex texContent={'\\pm'}/>
                                     <input value={this.state.inputArgs[x].absoluteUncertainty}
                                            aria-label={"absolute uncertainty of " + x}
                                            onChange={(e) => this.handleInputArgValueChange(e.target.value, x, 'absoluteUncertainty')}/>
                                 </td>
                                 <td>
+                                    (
+                                    <Tex texContent={'\\pm'}/>
                                     <input value={this.state.inputArgs[x].percentageUncertainty}
                                            aria-label={"percentage uncertainty of " + x}
                                            onChange={(e) => this.handleInputArgValueChange(e.target.value, x, 'percentageUncertainty')}/>
-                                    %
+                                    %)
                                 </td>
                             </tr>
                         )
