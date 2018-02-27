@@ -85,7 +85,8 @@ def calculate_uncertainties():
         assumptions = [sympy.Q.positive(sympy.Symbol(var)) for var in str_vars]
         absolute_uncertainty_expr = expr.calculate_absolute_uncertainty(*assumptions, refine=refine)
         fractional_uncertainty_expr = expr.calculate_fractional_uncertainty(*assumptions, refine=refine)
-        values.update(CONSTANTS)
+        if use_constants:
+            values.update(CONSTANTS)
         return jsonify({
             "success": True,
             "value": sympy.latex(expr.evaluate(values, precision=prec)),
