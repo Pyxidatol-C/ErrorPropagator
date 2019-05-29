@@ -1,4 +1,6 @@
 # ErrorPropagator / 误差几何?
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2FPyxidatol-C%2FErrorPropagator.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2FPyxidatol-C%2FErrorPropagator?ref=badge_shield)
+
 A calculator designed for propagation of uncertainties.  
 Use online: [https://wucha.herokuapp.com](https://wucha.herokuapp.com) 
 
@@ -24,3 +26,6 @@ This calculator might come in handy for analysis in lab reports when you have co
 - frontend: Javascript `React`
 - hosting: `Heroku` (with python and node.js buildpacks) 
  
+
+## License
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2FPyxidatol-C%2FErrorPropagator.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2FPyxidatol-C%2FErrorPropagator?ref=badge_large)
